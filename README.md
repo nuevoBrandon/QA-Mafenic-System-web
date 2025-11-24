@@ -1,46 +1,128 @@
-# Getting Started with Create React App
+# QA Mafenic System - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Aplicación frontend en React para gestionar el flujo de QA (tickets, usuarios y dashboard) del sistema **QA Mafenic**.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Tecnologías
 
-### `npm start`
+- React
+- TypeScript
+- React Router
+- CSS / Reactstrap / MUI (según lo que uses)
+- Integración con backend NestJS (API de tickets y auth)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+---
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Estructura principal del proyecto
 
-### `npm test`
+- `public/`
+- `src/`
+  - `Auth/` → lógica de autenticación (login, helpers, etc.)
+  - `components/` → componentes reutilizables
+  - `environment/` → configuración de entorno (URLs, etc.)
+  - `interfaces/` → tipos e interfaces TypeScript compartidos
+  - `pages/`
+    - `404/` → página de no encontrado
+    - `Home/`
+      - `dashboard/`
+      - `Ticket/`
+        - `Modals/` → modales para crear/editar ticket
+      - `User/`
+        - `Modals/` → modales para crear/editar usuario
+      - `Login/`
+  - `router/` → configuración de rutas
+  - `service/` → llamadas a la API (auth, tickets, usuarios)
+  - `App.tsx` / `index.tsx` → entrada principal de la app
+- `README.md` → este archivo
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Instalación
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Instala las dependencias:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+    npm install
+    # o
+    yarn install
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Configura las variables de entorno (si aplican), por ejemplo:
 
-### `npm run eject`
+- `REACT_APP_API_URL` → URL base del backend NestJS
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+En un archivo `.env`:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+    REACT_APP_API_URL=http://localhost:3000
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+---
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Scripts disponibles
 
-## Learn More
+Iniciar el proyecto en modo desarrollo:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+    npm start
+    # o
+    yarn start
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Construir la app para producción:
+
+    npm run build
+    # o
+    yarn build
+
+Ejecutar tests:
+
+    npm test
+    # o
+    yarn test
+
+---
+
+## Rutas principales (React Router)
+
+Las rutas están configuradas usando un layout principal:
+
+    <Route element={<Layout />}>
+        <Route path="/home" element={<Home />} />
+        <Route path="/setting-user" element={<User />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/custom-tickect" element={<Ticket />} />
+    </Route>
+
+Resumen de rutas:
+
+- `/home` → Página principal / Home
+- `/setting-user` → Administración de usuarios
+- `/dashboard` → Dashboard de QA (métricas, gráficos, etc.)
+- `/custom-tickect` → Gestión de tickets QA
+
+> Nota: No hay problema de seguridad por documentar estas rutas en el README; la seguridad se maneja con autenticación/autorización y validación en el backend, no ocultando URLs.
+
+---
+
+## Integración con el backend
+
+El frontend consume la API del backend NestJS (QA Mafenic System).  
+Ejemplos típicos de servicios (ubicados en `src/service`):
+
+- Autenticación: login, obtención de usuario actual.
+- Usuarios: listar, crear, actualizar, desactivar.
+- Tickets: listar, crear, actualizar, cambiar estado.
+
+Cada servicio usa la URL base definida en `REACT_APP_API_URL`.
+
+---
+
+## Deploy
+
+Para desplegar en producción:
+
+1. Construir la app:
+
+       npm run build
+       # o
+       yarn build
+
+2. Servir el contenido de la carpeta `build/` con cualquier servidor estático (Nginx, Apache, Vercel, Netlify, etc.).
+
+---
