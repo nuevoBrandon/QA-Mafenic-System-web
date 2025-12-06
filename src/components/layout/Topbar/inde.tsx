@@ -18,7 +18,7 @@ export default function TopBar({toggleDrawer,open}:Props) {
   const { logout } = React.useContext(AuthContext);
 
   return (
-    <AppBar position="fixed" sx={{ backgroundColor: "#1976d2", boxShadow: 3 }}>
+    <AppBar position="fixed" sx={{ backgroundColor: "#79c094ff", boxShadow: 3 }}>
       <Toolbar>
 
         <IconButton
@@ -36,7 +36,7 @@ export default function TopBar({toggleDrawer,open}:Props) {
           component="div"
           sx={{ flexGrow: 1, fontWeight: 600 }}
         >
-          QA Mafenic System
+          <img src="../logito.png"  width="200px" />
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <AccountCircleIcon />

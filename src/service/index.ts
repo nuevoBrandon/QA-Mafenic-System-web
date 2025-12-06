@@ -37,9 +37,29 @@ export const fetchTicket = async () =>{
     return response.data
 }
 
+export const fetchOneTicket = async (
+    id:number | string
+) =>{
+    const url = `${environment.base}${environment.ticket.base}/${id}`
+    const response = await axios.get<IResponse<ITicket>>(url,{
+        withCredentials: true,
+    })
+    return response.data
+}
+
 export const createTicket = async (param:ITicketRequest) =>{
     const url = `${environment.base}${environment.ticket.base}${environment.ticket.create}`
     const response = await axios.post<IResponse<any>>(url,param,{
+        withCredentials: true,
+    })
+    return response.data
+}
+
+export const updateTicket = async (
+    id:number | string,
+    param:ITicketRequest) =>{
+    const url = `${environment.base}${environment.ticket.base}${environment.ticket.update}/${id}`
+    const response = await axios.patch<IResponse<any>>(url,param,{
         withCredentials: true,
     })
     return response.data

@@ -28,7 +28,7 @@ interface Props {
     onCancel?: () => void;
 }
 
-export default function AddModal({
+export default function EditdModal({
     tipoTicket,
     titulo,
     descripcion,
@@ -51,8 +51,7 @@ export default function AddModal({
     onSave,
     onCancel,
 }: Props) {
-
-    const estadoOptions = ["PENDIENTE", "EN_PROGRESO", "RESUELTO", "CERRADO"];
+    const estadoOptions = ["PENDIENTE", "EN_PROGRESO", "RESUELTO", "CERRADO","ABIERTO"];
     const prioridadOptions = ["BAJA", "MEDIA", "ALTA"];
     const tipoOptions = ["Nuevo desarrollo", "Mejora", "Bug", "Soporte"];
     const selectedCreador = user.find((u) => u.IdUser === creadoPorId) ?? null;
@@ -171,7 +170,7 @@ export default function AddModal({
             <Grid size={6}>
                 <Autocomplete
                     options={user}
-                    value={selectedCreador}
+                    value={selectedCreador as any}
                     getOptionLabel={(option: IUser) => `${option.Name} - ${option.Rol}`}
                     onChange={(_, newValue: IUser | null) => {
 

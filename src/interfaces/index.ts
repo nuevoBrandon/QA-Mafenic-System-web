@@ -31,7 +31,7 @@ export interface ITicket {
   asignadoAId: string;
   fechaCreacion: string;    // si lo parseas a Date, cámbialo a Date
   fechaActualizacion: string;
-
+tiempoEstimado?: number | null;
   creadoPor: IUserTicket;
   asignadoA: IUserTicket;
 }
@@ -45,6 +45,7 @@ export interface ITicketRequest {
   tipo: string;
   creadoPorId: number;
   asignadoAId: number;
+  tiempoEstimado: number | null;
 }
 
 

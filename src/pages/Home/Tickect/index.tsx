@@ -10,7 +10,7 @@ import {
     Typography,
 } from "@mui/material";
 import HeaderBox from "../../../components/common/Header";
-import { createTicket, fetchTicket, fetchUser } from "../../../service";
+import { createTicket, fetchOneTicket, fetchTicket, fetchUser, updateTicket } from "../../../service";
 import { ITicket, IUser } from "../../../interfaces";
 import moment from "moment";
 import { GridColDef } from "@mui/x-data-grid";
@@ -18,6 +18,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import CustomDataGrid from "../../../components/common/Grid";
 import AddModal from "./Modals/AddModal";
 import AlertSanck from "../../../components/common/Alert";
+import EditdModal from "./Modals/EditdModal";
 
 
 const modalStyle = {
@@ -33,9 +34,12 @@ const modalStyle = {
 };
 
 export default function Ticket() {
+    const [idTicket, setIdTicket] = React.useState();
     const [ticket, setTicket] = React.useState<ITicket[]>();
+    const [oneticket, setOneTicket] = React.useState<ITicket>()
     const [user, setUser] = React.useState<IUser[]>();
     const [open, setOpen] = React.useState<boolean>(false);
+    const [openEdit, setOpenEdit] = React.useState(false);
 
     // 🔹 Estado del formulario del modal
     const [tipoTicket, setTipoTicket] = React.useState<string>("INCIDENCIA");
@@ -46,6 +50,7 @@ export default function Ticket() {
     const [tipo, setTipo] = React.useState<string>("");
     const [creadoPorId, setCreadoPorId] = React.useState<number | string | null>(null);
     const [asignadoAId, setAsignadoAId] = React.useState<number | string | null>(null);
+    const [tiempoEstimado, setTiempoEstimado] = React.useState<number | null>(null);
 
     const [snackbarOpen, setSnackbarOpen] = React.useState(false);
     const [snackbarMessage, setSnackbarMessage] = React.useState("");
@@ -59,12 +64,40 @@ export default function Ticket() {
         renderData()
     }, []);
 
+    React.useEffect(() => {
+        if (idTicket) {
+            findOneTicket(idTicket)
+        }
+    }, [idTicket]);
+
     const getTicket = async () => {
         try {
             const response = await fetchTicket();
             const { code, data } = response;
             if (code === "000") {
                 setTicket(data as ITicket[]);
+            }
+        } catch (error) {
+            console.log("error: ", error);
+        }
+    };
+
+    const findOneTicket = async (idTicket: any) => {
+        try {
+            const response = await fetchOneTicket(idTicket as any);
+            const { code, data } = response;
+            if (code === "000") {
+                if (data) {
+                    setTipoTicket(data.tipoTicket ?? "INCIDENCIA");
+                    setTitulo(data.titulo ?? "");
+                    setDescripcion(data.descripcion ?? "");
+                    setEstado(data.estado ?? "");
+                    setPrioridad(data.prioridad ?? "");
+                    setTipo(data.tipo ?? "");
+                    setCreadoPorId(data.creadoPor?.IdUser);
+                    setAsignadoAId(data.asignadoAId ?? null);
+                    setTiempoEstimado(data.tiempoEstimado ?? null);
+                }
             }
         } catch (error) {
             console.log("error: ", error);
@@ -108,8 +141,8 @@ export default function Ticket() {
                 return "default";
         }
     };
-    
-    const resetForm = () =>{
+
+    const resetForm = () => {
         setTitulo("")
         setDescripcion("")
         setEstado("")
@@ -117,6 +150,41 @@ export default function Ticket() {
         setTipo("")
         setCreadoPorId(null)
         setAsignadoAId(null)
+        setTiempoEstimado(null)
+    }
+
+    const submitEditTicket = async () => {
+        try {
+            const response = await updateTicket(idTicket ?? "", {
+                tipoTicket: tipoTicket,
+                titulo: titulo,
+                descripcion: descripcion,
+                estado: estado,
+                prioridad: prioridad,
+                tipo: tipo,
+                creadoPorId: Number(creadoPorId),
+                asignadoAId: Number(asignadoAId),
+                tiempoEstimado: tiempoEstimado
+            })
+            const { code, data, message } = response;
+            if (code === "000") {
+                await getTicket();
+
+                setOpenEdit(false);
+                resetForm()
+
+
+                setSnackbarMessage(message);
+                setSnackbarColor("success");
+                setSnackbarOpen(true);
+            } else {
+                setSnackbarMessage(message);
+                setSnackbarColor("error");
+                setSnackbarOpen(true);
+            }
+        } catch (error) {
+            console.log("error: ", error);
+        }
     }
 
     const submitTilkect = async () => {
@@ -129,13 +197,14 @@ export default function Ticket() {
                 prioridad: prioridad,
                 tipo: tipo,
                 creadoPorId: Number(creadoPorId),
-                asignadoAId: Number(asignadoAId)
+                asignadoAId: Number(asignadoAId),
+                tiempoEstimado: tiempoEstimado
             })
             const { code, data, message } = response;
             if (code === "000") {
                 await getTicket();
 
-                handleClose();
+                handleCloseEdit();
                 resetForm()
 
 
@@ -153,6 +222,11 @@ export default function Ticket() {
     }
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
+    const handleOpenEdit = () => setOpenEdit(true);
+    const handleCloseEdit = () => {
+        resetForm()
+        setOpenEdit(false)
+    };
     const handleCloseSnackbar = () => setSnackbarOpen(false);
 
 
@@ -173,6 +247,7 @@ export default function Ticket() {
                         descripcion={descripcion}
                         estado={estado}
                         prioridad={prioridad}
+                        tiempoEstimado={tiempoEstimado}
                         tipo={tipo}
                         creadoPorId={creadoPorId as any}
                         asignadoAId={asignadoAId}
@@ -184,15 +259,53 @@ export default function Ticket() {
                         handleTipo={(value: string) => setTipo(value)}
                         handleCreadoPorId={(value: any) => setCreadoPorId(value)}
                         handleAsignadoAId={(value: any) => setAsignadoAId(value)}
+                        handleTiempoEstimado={(value: any) => setTiempoEstimado(value)}
                         onSave={submitTilkect}
                         onCancel={handleClose}
                     />
-
-                    {/* Aquí después puedes agregar botones Guardar / Cancelar */}
                 </Box>
             </Modal>
         );
     };
+
+    const viewEditModal = () => {
+        return (
+            <Modal open={openEdit} onClose={handleCloseEdit}>
+                <Box sx={modalStyle}>
+                    <Typography variant="h6" mb={2}>
+                        Editar ticket
+                    </Typography>
+
+                    <EditdModal
+                        tipoTicket={tipoTicket}
+                        titulo={titulo}
+                        user={user as IUser[]}
+                        descripcion={descripcion}
+                        estado={estado}
+                        prioridad={prioridad}
+                        tiempoEstimado={tiempoEstimado}
+                        tipo={tipo}
+                        creadoPorId={creadoPorId as any}
+                        asignadoAId={asignadoAId}
+                        handleTipoTicket={(value: string) => setTipoTicket(value)}
+                        handleTitle={(value: string) => setTitulo(value)}
+                        handleDescripcion={(value: string) => setDescripcion(value)}
+                        handleEstado={(value: string) => setEstado(value)}
+                        handlePrioridad={(value: string) => setPrioridad(value)}
+                        handleTipo={(value: string) => setTipo(value)}
+                        handleCreadoPorId={(value: any) => setCreadoPorId(value)}
+                        handleAsignadoAId={(value: any) => setAsignadoAId(value)}
+                        handleTiempoEstimado={(value: any) =>
+                            setTiempoEstimado(Number(value) || null)
+                        }
+                        onSave={submitEditTicket}
+                        onCancel={handleCloseEdit}
+                    />
+                </Box>
+            </Modal>
+        );
+    };
+
 
     const columns: GridColDef<ITicket>[] = [
         {
@@ -307,7 +420,10 @@ export default function Ticket() {
             filterable: false,
             renderCell: (params) => (
                 <Tooltip title="Editar ticket">
-                    <IconButton size="small" onClick={() => console.log(params.row)}>
+                    <IconButton size="small" onClick={() => {
+                        handleOpenEdit()
+                        setIdTicket(params.row.idTicket as any)
+                    }}>
                         <EditIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                 </Tooltip>
@@ -324,6 +440,7 @@ export default function Ticket() {
                 color={snackbarColor}
             />
             {viewModal()}
+            {viewEditModal()}
 
             <Grid container spacing={3}>
                 <Grid size={12}>

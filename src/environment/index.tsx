@@ -9,6 +9,7 @@ export const environment ={
     },
     ticket:{
         base:'/ticket',
-        create:'/create'
+        create:'/create',
+        update:"/update"
     }
 }
