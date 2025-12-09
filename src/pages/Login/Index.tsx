@@ -15,7 +15,7 @@ import { AuthContext } from "../../Auth/AuthProvider";
 
 export default function Login() {
     const navigate = useNavigate()
-     const { login } = React.useContext(AuthContext); 
+    const { login } = React.useContext(AuthContext);
     const [user, setUser] = React.useState<string>("")
     const [password, setPassword] = React.useState<string>("")
 
@@ -38,7 +38,7 @@ export default function Login() {
             const { code, data } = response;
 
             if (code === "000") {
-                login(data.token); 
+                login(data);
             } else {
                 console.warn("Error en el inicio de sesión:", response);
             }
@@ -70,7 +70,7 @@ export default function Login() {
                         <Box component="form" sx={{ mt: 2 }}>
                             <TextField
                                 fullWidth
-                                label="Correo electrónico"
+                                label="Usuario"
                                 variant="outlined"
                                 margin="normal"
                                 value={user}

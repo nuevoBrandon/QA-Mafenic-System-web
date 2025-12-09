@@ -29,6 +29,7 @@ import {
     Cell,
     PieChart,
     Pie,
+    LabelList,
 } from "recharts"
 
 // 🔹 Helper para porcentaje
@@ -180,17 +181,27 @@ export default function Dashboard() {
         value,
     }))
 
-    // 🔹 Tickets por asignado (carga de trabajo)
+    // 🔹 Tickets por asignado (carga de trabajo + porcentaje)
+    const totalTicketsAsignacion = ticketsFiltrados.length
+
     const asignadoMap = ticketsFiltrados.reduce<Record<string, number>>((acc, t) => {
         const key = t.asignadoA ? t.asignadoA.Name : "Sin asignar"
         acc[key] = (acc[key] || 0) + 1
         return acc
     }, {})
 
-    const dataPorAsignado = Object.entries(asignadoMap).map(([name, value]) => ({
-        name,
-        value,
-    }))
+    const dataPorAsignado = Object.entries(asignadoMap).map(([name, value]) => {
+        const porcentajeNumber = totalTicketsAsignacion
+            ? Number(((value * 100) / totalTicketsAsignacion).toFixed(1))
+            : 0
+
+        return {
+            name,
+            value,
+            porcentaje: porcentajeNumber,
+            porcentajeLabel: `${porcentajeNumber}%`,
+        }
+    })
 
     // 🔹 Datos para el gráfico de barras (tickets por estado)
     const dataEstado = [
@@ -252,7 +263,7 @@ export default function Dashboard() {
 
     // 🔹 Tickets aprobados (CERRADO) en los últimos 15 días (sobre TODOS los tickets)
     const aprobadosUltimos15Dias = countTicketsByEstadoInLastDays(
-        tickets, // aquí uso la lista completa, no filtrada
+        tickets,
         "CERRADO",
         15
     )
@@ -261,6 +272,55 @@ export default function Dashboard() {
         aprobadosUltimos15Dias,
         tickets.length || 1
     )
+
+    // 🔹 Tickets CERRADOS (GLOBAL) validados vs no validados
+    const ticketsCerradosGlobal = tickets.filter((t) => t.estado === "CERRADO")
+    const totalCerradosGlobal = ticketsCerradosGlobal.length
+
+    const ticketsCerradosValidados = ticketsCerradosGlobal.filter(
+        (t) => t.activo === true
+    ).length
+
+    const ticketsCerradosNoValidados = ticketsCerradosGlobal.filter(
+        (t) => t.activo === false
+    ).length
+
+    const pctValidadosCerrados = getPercentage(
+        ticketsCerradosValidados,
+        totalCerradosGlobal || 1
+    )
+
+    const pctNoValidadosCerrados = getPercentage(
+        ticketsCerradosNoValidados,
+        totalCerradosGlobal || 1
+    )
+
+    const dataValidacionCerrados = [
+        { name: "Validados", value: ticketsCerradosValidados },
+        { name: "No validados", value: ticketsCerradosNoValidados },
+    ]
+
+    // 🔹 Tooltip personalizado para el gráfico de responsables
+    const CustomTooltipAsignado = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const { value, porcentaje } = payload[0].payload
+            return (
+                <div
+                    style={{
+                        background: "#fff",
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        borderRadius: 4,
+                    }}
+                >
+                    <p style={{ margin: 0, fontWeight: 600 }}>{label}</p>
+                    <p style={{ margin: "4px 0 0" }}>Tickets: {value}</p>
+                    <p style={{ margin: 0 }}>Porcentaje: {porcentaje}%</p>
+                </div>
+            )
+        }
+        return null
+    }
 
     return (
         <Grid container spacing={3}>
@@ -414,7 +474,7 @@ export default function Dashboard() {
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="name" />
                                     <YAxis allowDecimals={false} />
-                                    <Tooltip />
+                                    <Tooltip content={<CustomTooltipAsignado />} />
                                     <Legend />
                                     <Bar dataKey="value" name="Tickets">
                                         {dataPorAsignado.map((item, index) => (
@@ -427,6 +487,7 @@ export default function Dashboard() {
                                                 }
                                             />
                                         ))}
+                                        <LabelList dataKey="porcentajeLabel" position="top" />
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
@@ -456,7 +517,7 @@ export default function Dashboard() {
                                         {dataPrioridad.map((entry, index) => (
                                             <Cell
                                                 key={`cell-prioridad-${entry.name}`}
-                                                fill={["#e53935", "#fb8c00", "#43a047"][index % 3]} // Alta, Media, Baja
+                                                fill={["#e53935", "#fb8c00", "#43a047"][index % 3]}
                                             />
                                         ))}
                                     </Pie>
@@ -466,11 +527,44 @@ export default function Dashboard() {
                             </ResponsiveContainer>
                         </Paper>
                     </Grid>
+                    <Grid size={3}>
+                        <Paper elevation={3} sx={{ p: 2.5, height: 320 }}>
+                            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                                Validación de tickets cerrados
+                            </Typography>
 
-                    {/* Gráfico de tickets por tipo de ticket */}
-                    
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Total cerrados: {totalCerradosGlobal} | Validados:{" "}
+                                {ticketsCerradosValidados} ({pctValidadosCerrados}) | No validados:{" "}
+                                {ticketsCerradosNoValidados} ({pctNoValidadosCerrados})
+                            </Typography>
 
-                    <Grid size={9}>
+                            {totalCerradosGlobal === 0 ? (
+                                <Typography variant="body2" color="text.secondary">
+                                    No hay tickets cerrados para mostrar.
+                                </Typography>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={dataValidacionCerrados}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            outerRadius={90}
+                                            label
+                                        >
+                                            <Cell key="validados" fill="#43a047" />
+                                            <Cell key="no-validados" fill="#e53935" />
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </Paper>
+                    </Grid>
+                    {/* Gráfico de tickets por estado */}
+                    <Grid size={6}>
                         <Paper elevation={3} sx={{ p: 2.5, height: 320 }}>
                             <Typography variant="subtitle1" sx={{ mb: 2 }}>
                                 Tickets por estado
@@ -496,6 +590,9 @@ export default function Dashboard() {
                     </Grid>
                 </Grid>
             </Grid>
+
+
+
 
             {/* Tabla de últimos tickets */}
             <Grid size={12} sx={{ mt: 4 }}>

@@ -2,6 +2,7 @@ import React from "react";
 import {
     AlertColor,
     Box,
+    Button,
     Chip,
     Grid,
     IconButton,
@@ -19,6 +20,8 @@ import CustomDataGrid from "../../../components/common/Grid";
 import AddModal from "./Modals/AddModal";
 import AlertSanck from "../../../components/common/Alert";
 import EditdModal from "./Modals/EditdModal";
+import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges';
+import { AuthContext } from "../../../Auth/AuthProvider";
 
 
 const modalStyle = {
@@ -34,6 +37,7 @@ const modalStyle = {
 };
 
 export default function Ticket() {
+    const { user: userContext } = React.useContext(AuthContext);
     const [idTicket, setIdTicket] = React.useState();
     const [ticket, setTicket] = React.useState<ITicket[]>();
     const [oneticket, setOneTicket] = React.useState<ITicket>()
@@ -187,6 +191,28 @@ export default function Ticket() {
         }
     }
 
+    const submitFinalizarTicket = async (idTicket: any) => {
+        try {
+            const response = await updateTicket(idTicket ?? "", {
+                activo: userContext.rol === "Gerente TI" ? true : false,
+            })
+            const { code, data, message } = response;
+            if (code === "000") {
+                await getTicket();
+
+                setSnackbarMessage(message);
+                setSnackbarColor("success");
+                setSnackbarOpen(true);
+            } else {
+                setSnackbarMessage(message);
+                setSnackbarColor("error");
+                setSnackbarOpen(true);
+            }
+        } catch (error) {
+            console.log("error: ", error);
+        }
+    }
+
     const submitTilkect = async () => {
         try {
             const response = await createTicket({
@@ -204,7 +230,7 @@ export default function Ticket() {
             if (code === "000") {
                 await getTicket();
 
-                handleCloseEdit();
+                setOpen(false);
                 resetForm()
 
 
@@ -306,7 +332,6 @@ export default function Ticket() {
         );
     };
 
-
     const columns: GridColDef<ITicket>[] = [
         {
             field: "titulo",
@@ -315,6 +340,7 @@ export default function Ticket() {
             minWidth: 220,
             headerAlign: "left",
             align: "left",
+            renderCell: (params) => params.row.correlativo + "-" + params.value
         },
         {
             field: "tipoTicket",
@@ -375,7 +401,7 @@ export default function Ticket() {
         {
             field: "creadoPor",
             headerName: "Creado por",
-            minWidth: 150,
+            minWidth: 120,
             flex: 1,
             headerAlign: "left",
             align: "left",
@@ -384,49 +410,60 @@ export default function Ticket() {
         {
             field: "asignadoA",
             headerName: "Asignado a",
-            minWidth: 150,
+            minWidth: 120,
             flex: 1,
             headerAlign: "left",
             align: "left",
             renderCell: (params) => params.row.asignadoA?.Name ?? "-",
         },
         {
-            field: "fechaCreacion",
-            headerName: "Creado",
-            minWidth: 170,
+            field: "activo",
+            headerName: "Validado",
+            minWidth: 100,
             flex: 1,
             headerAlign: "left",
             align: "left",
-            renderCell: (params) =>
-                moment(params.value).format("YYYY-MM-DD HH:mm"),
-        },
-        {
-            field: "fechaActualizacion",
-            headerName: "Actualizado",
-            minWidth: 170,
-            flex: 1,
-            headerAlign: "left",
-            align: "left",
-            renderCell: (params) =>
-                moment(params.value).format("YYYY-MM-DD HH:mm"),
+            renderCell: (params) => (params.value ? "Sí" : "No"),
+
         },
         {
             field: "accion",
             headerName: "Acción",
-            width: 80,
+            width: 200,
+            flex: 0,
             headerAlign: "center",
             align: "center",
-            sortable: false,
-            filterable: false,
             renderCell: (params) => (
-                <Tooltip title="Editar ticket">
-                    <IconButton size="small" onClick={() => {
-                        handleOpenEdit()
-                        setIdTicket(params.row.idTicket as any)
-                    }}>
-                        <EditIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                </Tooltip>
+                <Box>
+                    <Button
+                        variant="contained"
+                        color="info"
+                        size="small"
+                        sx={{
+                            textTransform: "Capitalize",
+                            borderRadius: "20px",
+                            mr: 2
+                        }}
+                        onClick={() => {
+                            handleOpenEdit()
+                            setIdTicket(params.row.idTicket as any)
+                        }}>Editar</Button>
+                    {
+                        userContext?.rol === "Gerente TI" && (
+                            <Button
+                                size="small"
+                                variant="contained"
+                                sx={{
+                                    textTransform: "Capitalize",
+                                    borderRadius: "20px"
+                                }}
+                                color="error"
+                                onClick={() => submitFinalizarTicket(params.row.idTicket)}
+                            >Finalizar</Button>
+                        )
+                    }
+                </Box>
+
             ),
         },
     ];

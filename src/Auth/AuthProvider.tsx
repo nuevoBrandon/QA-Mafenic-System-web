@@ -1,3 +1,4 @@
+import { jwtDecode } from "jwt-decode";
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -6,6 +7,7 @@ interface AuthContextProps {
   login: (token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  user:any
 }
 
 export const AuthContext = createContext<AuthContextProps>({
@@ -13,6 +15,7 @@ export const AuthContext = createContext<AuthContextProps>({
   login: () => {},
   logout: () => {},
   isAuthenticated: false,
+  user:null
 });
 
 interface ProviderProps {
@@ -24,29 +27,44 @@ export default function AuthProvider({ children }: ProviderProps) {
   const [token, setToken] = useState<string | null>(
     localStorage.getItem("token")
   );
+  const [user, setUser] = useState<any>();
+
+  const decodeAndSetUser = (jwt: string) => {
+    try {
+      const decoded = jwtDecode<any>(jwt);
+      setUser(decoded);
+    } catch (err) {
+      console.error("Error al decodificar el token:", err);
+      setUser(null);
+    }
+  };
 
   const login = (newToken: string) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
+    decodeAndSetUser(newToken);
     navigate("/home"); 
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
+    setUser(null);
     navigate("/"); 
   };
 
   const isAuthenticated = !!token;
 
   useEffect(() => {
-    if (!token) {
-      // Aquí podrías hacer validaciones adicionales, como refresh token
+    if (token) {
+      decodeAndSetUser(token);
+    } else {
+      setUser(null);
     }
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ token, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ token, user , login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
