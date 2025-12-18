@@ -417,6 +417,25 @@ export default function Ticket() {
             renderCell: (params) => params.row.asignadoA?.Name ?? "-",
         },
         {
+            field: "duracionCierreSeg",
+            headerName: "duracion",
+            minWidth: 100,
+            flex: 1,
+            headerAlign: "left",
+            align: "left",
+            renderCell: (params) => {
+                const s = Number(params.value);
+                if (!s || isNaN(s)) return "-";
+
+                const hours = Math.floor(s / 3600);
+                const minutes = Math.floor((s % 3600) / 60);
+                const seconds = s % 60;
+
+                const pad = (n:any) => String(n).padStart(2, "0");
+                return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+            },
+        },
+        {
             field: "activo",
             headerName: "Validado",
             minWidth: 100,
