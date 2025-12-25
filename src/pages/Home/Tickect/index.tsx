@@ -435,6 +435,17 @@ export default function Ticket() {
                 return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
             },
         },
+         {
+            field: "tiempoEstimado",
+            headerName: "Hr Estimada",
+            minWidth: 100,
+            flex: 1,
+            headerAlign: "left",
+            align: "left",
+            renderCell: (params) => {
+                return params.value + 'h'
+            }
+        },
         {
             field: "activo",
             headerName: "Validado",

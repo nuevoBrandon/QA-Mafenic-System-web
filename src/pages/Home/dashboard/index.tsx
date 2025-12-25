@@ -39,13 +39,9 @@ const getPercentage = (value: number, total: number): string => {
 
 // ✅ Helper robusto: sin asignar si NO hay objeto asignado o asignadoAId es 0/"0"
 const isSinAsignar = (t: any): boolean => {
-  // si el backend no envía asignadoA cuando está sin asignar
   if (t.asignadoA == null) return true
-
-  // por si viene asignadoAId como "0" (string) o 0 (number)
   const id = Number(t.asignadoAId)
   if (!isNaN(id) && id === 0) return true
-
   return false
 }
 
@@ -173,9 +169,6 @@ export default function Dashboard() {
   // ✅ FIX: ahora sí cuenta "0" / 0 / null / undefined
   const sinAsignar = ticketsFiltrados.filter(isSinAsignar).length
 
-  // 🔁 Si lo quieres GLOBAL (sin depender del filtro de estado), usa esto y reemplaza sinAsignar arriba:
-  // const sinAsignar = tickets.filter(isSinAsignar).length
-
   const incidencias = ticketsFiltrados.filter((t) => t.tipoTicket === "INCIDENCIA").length
 
   // 🔹 Tickets por prioridad
@@ -202,7 +195,6 @@ export default function Dashboard() {
   // 🔹 Tickets por asignado
   const totalTicketsAsignacion = ticketsFiltrados.length
   const asignadoMap = ticketsFiltrados.reduce<Record<string, number>>((acc, t: any) => {
-    // ✅ FIX: si es sin asignar, poner "Sin asignar" aunque venga asignadoAId "0"
     const key = isSinAsignar(t) ? "Sin asignar" : t.asignadoA?.Name || "Sin asignar"
     acc[key] = (acc[key] || 0) + 1
     return acc
@@ -347,6 +339,57 @@ export default function Dashboard() {
     return formatDuration(transcurridoSeg)
   }
 
+  // ✅ Duración real (en segundos): si está cerrado usa duracionCierreSeg, si no usa transcurrido
+  const getDuracionRealSeg = (ticket: any): number | null => {
+    if (ticket.estado === "CERRADO") {
+      const s = Number(ticket.duracionCierreSeg)
+      return Number.isFinite(s) && s >= 0 ? s : null
+    }
+    const created = new Date(ticket.fechaCreacion).getTime()
+    if (!Number.isFinite(created)) return null
+    const transcurridoSeg = Math.floor((Date.now() - created) / 1000)
+    return transcurridoSeg >= 0 ? transcurridoSeg : 0
+  }
+
+  // ✅ Estimado en segundos (asumiendo tiempoEstimado = horas)
+  const getEstimadoSeg = (ticket: any): number | null => {
+    const h = Number(ticket.tiempoEstimado)
+    if (!Number.isFinite(h) || h <= 0) return null
+    return Math.round(h * 3600)
+  }
+
+  // ✅ Ranking: más rápidos vs estimado y más lentos vs estimado (Top 5)
+  const rankingPorEstimado = React.useMemo(() => {
+    const base = ticketsFiltrados
+      // Si quieres SOLO CERRADOS, descomenta:
+      // .filter((t: any) => t.estado === "CERRADO")
+      .map((t: any) => {
+        const durRealSeg = getDuracionRealSeg(t)
+        const estSeg = getEstimadoSeg(t)
+        if (durRealSeg == null || estSeg == null) return null
+
+        return {
+          ...t,
+          durRealSeg,
+          estSeg,
+          deltaSeg: durRealSeg - estSeg, // (+) se pasó, (-) antes
+        }
+      })
+      .filter(Boolean) as any[]
+
+    const menoresAlEstimado = [...base]
+      .filter((t) => t.deltaSeg <= 0)
+      .sort((a, b) => a.deltaSeg - b.deltaSeg) // más negativo = más rápido vs estimado
+      .slice(0, 5)
+
+    const mayoresAlEstimado = [...base]
+      .filter((t) => t.deltaSeg > 0)
+      .sort((a, b) => b.deltaSeg - a.deltaSeg) // más positivo = peor
+      .slice(0, 5)
+
+    return { menoresAlEstimado, mayoresAlEstimado }
+  }, [ticketsFiltrados])
+
   return (
     <Grid container spacing={3}>
       <Grid size={12}>
@@ -423,7 +466,11 @@ export default function Dashboard() {
               value={`${sinAsignar} (${pctSinAsignar})`}
               chartData={[
                 { name: "Sin asignar", value: sinAsignar, color: "#8e24aa" },
-                { name: "Asignados", value: Math.max(totalTickets - sinAsignar, 0), color: "#e0e0e0" },
+                {
+                  name: "Asignados",
+                  value: Math.max(totalTickets - sinAsignar, 0),
+                  color: "#e0e0e0",
+                },
               ]}
             />
           </Grid>
@@ -452,10 +499,133 @@ export default function Dashboard() {
             <StatCard title="Cierre más lento" value={formatDuration(maxDur)} />
           </Grid>
         </Grid>
+
+        {/* ✅ NUEVO: Ranking vs tiempo estimado */}
+      </Grid>
+      <Grid size={12} sx={{ mt: 4 }}>
+        <Grid container spacing={2}>
+          {/* ✅ Menor duración al estimado */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Paper elevation={3} sx={{ p: 2.5 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                ✅ Tickets más rápidos vs estimado (Top 5)
+              </Typography>
+
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Ticket</TableCell>
+                      <TableCell>Estado</TableCell>
+                      <TableCell align="right">Estimado</TableCell>
+                      <TableCell align="right">Real</TableCell>
+                      <TableCell align="right">Diferencia</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rankingPorEstimado.menoresAlEstimado.map((t: any) => (
+                      <TableRow key={t.idTicket} hover>
+                        <TableCell>
+                          {t.correlativo}-{t.titulo}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={t.estado}
+                            color={getEstadoColor(t.estado) as any}
+                          />
+                        </TableCell>
+                        <TableCell align="right">{formatDuration(t.estSeg)}</TableCell>
+                        <TableCell align="right">{formatDuration(t.durRealSeg)}</TableCell>
+                        <TableCell align="right">
+                          <Chip
+                            size="small"
+                            label={`-${formatDuration(Math.abs(t.deltaSeg))}`}
+                            color="success"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                    {rankingPorEstimado.menoresAlEstimado.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          <Typography variant="body2" color="text.secondary">
+                            No hay datos para comparar.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          </Grid>
+
+          {/* 🚨 Mayor duración al estimado */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Paper elevation={3} sx={{ p: 2.5 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                🚨 Tickets más lentos vs estimado (Top 5)
+              </Typography>
+
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Ticket</TableCell>
+                      <TableCell>Estado</TableCell>
+                      <TableCell align="right">Estimado</TableCell>
+                      <TableCell align="right">Real</TableCell>
+                      <TableCell align="right">Exceso</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rankingPorEstimado.mayoresAlEstimado.map((t: any) => (
+                      <TableRow key={t.idTicket} hover>
+                        <TableCell>
+                          {t.correlativo}-{t.titulo}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={t.estado}
+                            color={getEstadoColor(t.estado) as any}
+                          />
+                        </TableCell>
+                        <TableCell align="right">{formatDuration(t.estSeg)}</TableCell>
+                        <TableCell align="right">{formatDuration(t.durRealSeg)}</TableCell>
+                        <TableCell align="right">
+                          <Chip
+                            size="small"
+                            label={`+${formatDuration(t.deltaSeg)}`}
+                            color="error"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                    {rankingPorEstimado.mayoresAlEstimado.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          <Typography variant="body2" color="text.secondary">
+                            No hay datos para comparar.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          </Grid>
+        </Grid>
       </Grid>
 
       {/* Segunda sección: responsables + cards */}
-      <Grid size={12} sx={{ mt: 6 }}>
+      <Grid size={12} sx={{ mt: 4 }}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 4 }}>
             <Grid container spacing={2} rowSpacing={6}>
@@ -545,7 +715,13 @@ export default function Dashboard() {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={dataValidacionCerrados} dataKey="value" nameKey="name" outerRadius={90} label>
+                    <Pie
+                      data={dataValidacionCerrados}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={90}
+                      label
+                    >
                       <Cell key="validados" fill="#43a047" />
                       <Cell key="no-validados" fill="#e53935" />
                     </Pie>
@@ -571,7 +747,10 @@ export default function Dashboard() {
                   <Legend />
                   <Bar dataKey="value" name="Cantidad">
                     {dataEstado.map((item) => (
-                      <Cell key={`cell-${item.name}`} fill={colorByEstado[item.name] || "#1976d2"} />
+                      <Cell
+                        key={`cell-${item.name}`}
+                        fill={colorByEstado[item.name] || "#1976d2"}
+                      />
                     ))}
                   </Bar>
                 </BarChart>
@@ -621,10 +800,18 @@ export default function Dashboard() {
                     </TableCell>
                     <TableCell>{ticket.tipoTicket}</TableCell>
                     <TableCell>
-                      <Chip size="small" label={ticket.estado} color={getEstadoColor(ticket.estado) as any} />
+                      <Chip
+                        size="small"
+                        label={ticket.estado}
+                        color={getEstadoColor(ticket.estado) as any}
+                      />
                     </TableCell>
                     <TableCell>
-                      <Chip size="small" label={ticket.prioridad} color={getPrioridadColor(ticket.prioridad) as any} />
+                      <Chip
+                        size="small"
+                        label={ticket.prioridad}
+                        color={getPrioridadColor(ticket.prioridad) as any}
+                      />
                     </TableCell>
                     <TableCell>{ticket.creadoPor?.Name}</TableCell>
                     <TableCell>
