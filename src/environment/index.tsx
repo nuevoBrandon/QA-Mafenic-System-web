@@ -5,7 +5,9 @@ export const environment ={
         base:'/auth',
         signIn:'/signIn',
         users:'/users',
-        create:'/create'
+        user:'/user',
+        create:'/create',
+        update:"/update"
     },
     ticket:{
         base:'/ticket',

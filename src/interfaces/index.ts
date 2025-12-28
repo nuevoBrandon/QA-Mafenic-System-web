@@ -10,6 +10,7 @@ export interface IUser {
   Rol: string;
   Active?: "Y" | "N";
   CreateDate?: Date
+  Password?:string
 }
 
 export interface IUserTicket {
@@ -55,8 +56,8 @@ export interface ITicketRequest {
 export interface IUserRequest {
   Name: string;
   Rol: string;
-  Password: string;
-  Active?: "Y" | "N";
+  Password?: string;
+  Active?: string;
 }
 
 

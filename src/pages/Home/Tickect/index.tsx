@@ -22,7 +22,9 @@ import AlertSanck from "../../../components/common/Alert";
 import EditdModal from "./Modals/EditdModal";
 import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges';
 import { AuthContext } from "../../../Auth/AuthProvider";
-
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import GetAppIcon from '@mui/icons-material/GetApp';
 
 const modalStyle = {
     position: "absolute" as const,
@@ -60,6 +62,74 @@ export default function Ticket() {
     const [snackbarMessage, setSnackbarMessage] = React.useState("");
     const [snackbarColor, setSnackbarColor] = React.useState<AlertColor>("success");
 
+    const formatDuracion = (s: any) => {
+        const sec = Number(s);
+        if (!sec || isNaN(sec)) return "";
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const ss = sec % 60;
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${pad(h)}:${pad(m)}:${pad(ss)}`;
+    };
+
+    const formatFecha = (iso: any) => (iso ? moment(iso).format("YYYY-MM-DD HH:mm:ss") : "");
+
+    const downloadExcel = () => {
+        const rows = (ticket ?? []).map((t: any) => ({
+            idTicket: t.idTicket,
+            correlativo: t.correlativo,
+            tipoTicket: t.tipoTicket,
+            titulo: t.titulo,
+            descripcion: t.descripcion,
+            estado: t.estado,
+            prioridad: t.prioridad,
+            tipo: t.tipo,
+            activo: t.activo ? "Sí" : "No",
+            creadoPor: t.creadoPor?.Name ?? "",
+            creadoPorRol: t.creadoPor?.Rol ?? "",
+            asignadoA: t.asignadoA?.Name ?? "",
+            asignadoARol: t.asignadoA?.Rol ?? "",
+            tiempoEstimadoH: t.tiempoEstimado ?? "",
+            fechaCreacion: formatFecha(t.fechaCreacion),
+            fechaActualizacion: formatFecha(t.fechaActualizacion),
+            fechaCierre: formatFecha(t.fechaCierre),
+            duracionCierre: formatDuracion(t.duracionCierreSeg),
+            duracionCierreSeg: t.duracionCierreSeg ?? "",
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws["!cols"] = [
+            { wch: 8 },  // idTicket
+            { wch: 10 }, // correlativo
+            { wch: 14 }, // tipoTicket
+            { wch: 28 }, // titulo
+            { wch: 45 }, // descripcion
+            { wch: 14 }, // estado
+            { wch: 12 }, // prioridad
+            { wch: 14 }, // tipo
+            { wch: 10 }, // activo
+            { wch: 16 }, // creadoPor
+            { wch: 12 }, // creadoPorRol
+            { wch: 16 }, // asignadoA
+            { wch: 12 }, // asignadoARol
+            { wch: 14 }, // tiempoEstimadoH
+            { wch: 20 }, // fechaCreacion
+            { wch: 20 }, // fechaActualizacion
+            { wch: 20 }, // fechaCierre
+            { wch: 14 }, // duracionCierre
+            { wch: 16 }, // duracionCierreSeg
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tickets");
+
+        const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const blob = new Blob([buf], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+
+        saveAs(blob, `tickets_${moment().format("YYYYMMDD_HHmm")}.xlsx`);
+    };
     React.useEffect(() => {
         const renderData = async () => {
             await getTicket();
@@ -194,7 +264,7 @@ export default function Ticket() {
     const submitFinalizarTicket = async (idTicket: any) => {
         try {
             const response = await updateTicket(idTicket ?? "", {
-                activo: userContext.rol === "Gerente TI" ? true : false,
+                activo: userContext.rol === "GERENTE_TI" ? true : false,
             })
             const { code, data, message } = response;
             if (code === "000") {
@@ -431,11 +501,11 @@ export default function Ticket() {
                 const minutes = Math.floor((s % 3600) / 60);
                 const seconds = s % 60;
 
-                const pad = (n:any) => String(n).padStart(2, "0");
+                const pad = (n: any) => String(n).padStart(2, "0");
                 return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
             },
         },
-         {
+        {
             field: "tiempoEstimado",
             headerName: "Hr Estimada",
             minWidth: 100,
@@ -479,7 +549,7 @@ export default function Ticket() {
                             setIdTicket(params.row.idTicket as any)
                         }}>Editar</Button>
                     {
-                        userContext?.rol === "Gerente TI" && (
+                        userContext?.rol === "GERENTE_TI" && (
                             <Button
                                 size="small"
                                 variant="contained"
@@ -517,7 +587,21 @@ export default function Ticket() {
                         submit={handleOpen}
                     />
                 </Grid>
+               
                 <Grid size={12} sx={{ mt: 5 }}>
+                    <Button 
+                    startIcon={
+                        <GetAppIcon />
+                    }
+                    variant="contained" 
+                    size="small"
+                    sx={{ 
+                        borderRadius:"20px",
+                        textTransform:"capitalize",
+                        mb:2
+                     }} onClick={downloadExcel}>
+                        Descargar Excel
+                    </Button>
                     <CustomDataGrid
                         columns={columns}
                         rows={ticket}

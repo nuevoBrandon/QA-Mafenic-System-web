@@ -19,10 +19,28 @@ export const createUser = async (param:IUserRequest) =>{
     return response.data
 }
 
+export const updateUser = async ( id:string,param:IUserRequest) =>{
+    const url = `${environment.base}${environment.auth.base}${environment.auth.update}/${id}`
+    const response = await axios.patch(url,param,{
+        withCredentials: true,
+    })
+    return response.data
+}
+
 
 export const fetchUser = async () =>{
     const url = `${environment.base}${environment.auth.base}${environment.auth.users}`
     const response = await axios.get<IResponse<IUser[]>>(url,{
+        withCredentials: true,
+    })
+    return response.data
+}
+
+export const findOneUser = async (
+    id:string
+) =>{
+    const url = `${environment.base}${environment.auth.base}/${id}${environment.auth.user}`
+    const response = await axios.get<IResponse<IUser>>(url,{
         withCredentials: true,
     })
     return response.data
