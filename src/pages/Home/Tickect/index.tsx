@@ -11,7 +11,7 @@ import {
     Typography,
 } from "@mui/material";
 import HeaderBox from "../../../components/common/Header";
-import { createTicket, fetchOneTicket, fetchTicket, fetchUser, updateTicket } from "../../../service";
+import { createTicket, deleteTicket, fetchOneTicket, fetchTicket, fetchUser, updateTicket } from "../../../service";
 import { ITicket, IUser } from "../../../interfaces";
 import moment from "moment";
 import { GridColDef } from "@mui/x-data-grid";
@@ -25,6 +25,10 @@ import { AuthContext } from "../../../Auth/AuthProvider";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import GetAppIcon from '@mui/icons-material/GetApp';
+import Search from "./components/Search";
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import DeleteIcon from '@mui/icons-material/Delete';
+
 
 const modalStyle = {
     position: "absolute" as const,
@@ -54,6 +58,11 @@ export default function Ticket() {
     const [estado, setEstado] = React.useState<string>("");
     const [prioridad, setPrioridad] = React.useState<string>("");
     const [tipo, setTipo] = React.useState<string>("");
+
+    const [estadoSearch, setEstadoSearch] = React.useState<string>("");
+    const [prioridadSearch, setPrioridadSearch] = React.useState<string>("");
+    const [tipoSearch, setTipoSearch] = React.useState<string>("");
+
     const [creadoPorId, setCreadoPorId] = React.useState<number | string | null>(null);
     const [asignadoAId, setAsignadoAId] = React.useState<number | string | null>(null);
     const [tiempoEstimado, setTiempoEstimado] = React.useState<number | null>(null);
@@ -146,7 +155,12 @@ export default function Ticket() {
 
     const getTicket = async () => {
         try {
-            const response = await fetchTicket();
+            const response = await fetchTicket({
+                activo: undefined,
+                estado: estadoSearch,
+                prioridad: prioridadSearch,
+                tipo: tipoSearch
+            });
             const { code, data } = response;
             if (code === "000") {
                 setTicket(data as ITicket[]);
@@ -266,6 +280,26 @@ export default function Ticket() {
             const response = await updateTicket(idTicket ?? "", {
                 activo: userContext.rol === "GERENTE_TI" ? true : false,
             })
+            const { code, data, message } = response;
+            if (code === "000") {
+                await getTicket();
+
+                setSnackbarMessage(message);
+                setSnackbarColor("success");
+                setSnackbarOpen(true);
+            } else {
+                setSnackbarMessage(message);
+                setSnackbarColor("error");
+                setSnackbarOpen(true);
+            }
+        } catch (error) {
+            console.log("error: ", error);
+        }
+    }
+
+    const submitDeleteTicket = async (idTicket: any) => {
+        try {
+            const response = await deleteTicket(idTicket ?? "");
             const { code, data, message } = response;
             if (code === "000") {
                 await getTicket();
@@ -528,38 +562,49 @@ export default function Ticket() {
         },
         {
             field: "accion",
-            headerName: "Acción",
+            headerName: "",
             width: 200,
             flex: 0,
             headerAlign: "center",
             align: "center",
             renderCell: (params) => (
                 <Box>
-                    <Button
-                        variant="contained"
-                        color="info"
-                        size="small"
-                        sx={{
-                            textTransform: "Capitalize",
-                            borderRadius: "20px",
-                            mr: 2
-                        }}
-                        onClick={() => {
-                            handleOpenEdit()
-                            setIdTicket(params.row.idTicket as any)
-                        }}>Editar</Button>
+                    <Tooltip title="Editar" arrow>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                handleOpenEdit()
+                                setIdTicket(params.row.idTicket as any)
+                            }}
+                        >
+                            <EditIcon sx={{ fontSize: "18px" }} />
+                        </IconButton>
+                    </Tooltip>
+
                     {
                         userContext?.rol === "GERENTE_TI" && (
-                            <Button
-                                size="small"
-                                variant="contained"
-                                sx={{
-                                    textTransform: "Capitalize",
-                                    borderRadius: "20px"
-                                }}
-                                color="error"
-                                onClick={() => submitFinalizarTicket(params.row.idTicket)}
-                            >Finalizar</Button>
+                            <Tooltip title="Finalizar Ticket" arrow>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => submitFinalizarTicket(params.row.idTicket)}
+                                >
+                                    <CheckCircleOutlineIcon sx={{ fontSize: "18px" }} />
+                                </IconButton>
+                            </Tooltip>
+
+                        )
+                    }
+                    {
+                        userContext?.rol === "GERENTE_TI" && (
+                            <Tooltip title="Eliminar Ticket" arrow>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => submitDeleteTicket(params.row.idTicket)}
+                                >
+                                    <DeleteIcon sx={{ fontSize: "18px" }} />
+                                </IconButton>
+                            </Tooltip>
+
                         )
                     }
                 </Box>
@@ -587,19 +632,30 @@ export default function Ticket() {
                         submit={handleOpen}
                     />
                 </Grid>
-               
                 <Grid size={12} sx={{ mt: 5 }}>
-                    <Button 
-                    startIcon={
-                        <GetAppIcon />
-                    }
-                    variant="contained" 
-                    size="small"
-                    sx={{ 
-                        borderRadius:"20px",
-                        textTransform:"capitalize",
-                        mb:2
-                     }} onClick={downloadExcel}>
+                    <Search
+                        estado={estadoSearch}
+                        prioridad={prioridadSearch}
+                        tipo={tipoSearch}
+                        handleEstado={(value: string) => setEstadoSearch(value)}
+                        handlePrioridad={(value: string) => setPrioridadSearch(value)}
+                        handleTipo={(value: string) => setTipoSearch(value)}
+                        onSearch={getTicket}
+                    />
+                </Grid>
+
+                <Grid size={12} sx={{ mt: 5 }}>
+                    <Button
+                        startIcon={
+                            <GetAppIcon />
+                        }
+                        variant="contained"
+                        size="small"
+                        sx={{
+                            borderRadius: "20px",
+                            textTransform: "capitalize",
+                            mb: 2
+                        }} onClick={downloadExcel}>
                         Descargar Excel
                     </Button>
                     <CustomDataGrid

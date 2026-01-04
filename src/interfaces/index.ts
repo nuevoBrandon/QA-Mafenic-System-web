@@ -67,3 +67,9 @@ export interface IResponse<T> {
   data: T
 }
 
+export interface IQueryTicket {
+  estado?: string;
+  prioridad?: string;
+  tipo?: string;
+  activo?: boolean; 
+}

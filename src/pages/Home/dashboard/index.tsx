@@ -92,7 +92,12 @@ export default function Dashboard() {
 
   const getTicket = async () => {
     try {
-      const response = await fetchTicket()
+      const response = await fetchTicket({
+                activo: undefined,
+                estado:"",
+                prioridad:"",
+                tipo:"" 
+            })
       const { code, data } = response
       if (code === "000") {
         setTickets(data as ITicket[])

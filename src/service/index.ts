@@ -1,6 +1,6 @@
 import axios from "axios"
 import { environment } from "../environment"
-import { IResponse, ISignIn, ITicket, ITicketRequest, IUser, IUserRequest } from "../interfaces"
+import { IQueryTicket, IResponse, ISignIn, ITicket, ITicketRequest, IUser, IUserRequest } from "../interfaces"
 
 
 export const signIn = async (param:ISignIn) =>{
@@ -27,6 +27,14 @@ export const updateUser = async ( id:string,param:IUserRequest) =>{
     return response.data
 }
 
+export const deleteUser = async ( id:string) =>{
+    const url = `${environment.base}${environment.auth.base}${environment.auth.delete}/${id}`
+    const response = await axios.post(url,{
+        withCredentials: true,
+    })
+    return response.data
+}
+
 
 export const fetchUser = async () =>{
     const url = `${environment.base}${environment.auth.base}${environment.auth.users}`
@@ -47,10 +55,13 @@ export const findOneUser = async (
 }
 
 
-export const fetchTicket = async () =>{
+export const fetchTicket = async (
+    param:IQueryTicket
+) =>{
     const url = `${environment.base}${environment.ticket.base}`
     const response = await axios.get<IResponse<ITicket[]>>(url,{
         withCredentials: true,
+        params: param
     })
     return response.data
 }
@@ -60,6 +71,16 @@ export const fetchOneTicket = async (
 ) =>{
     const url = `${environment.base}${environment.ticket.base}/${id}`
     const response = await axios.get<IResponse<ITicket>>(url,{
+        withCredentials: true,
+    })
+    return response.data
+}
+
+export const deleteTicket = async (
+    id:number | string
+) =>{
+    const url = `${environment.base}${environment.ticket.base}/${id}`
+    const response = await axios.delete<IResponse<ITicket>>(url,{
         withCredentials: true,
     })
     return response.data

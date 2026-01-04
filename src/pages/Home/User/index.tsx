@@ -4,13 +4,14 @@ import { GridColDef } from "@mui/x-data-grid";
 import CustomDataGrid from "../../../components/common/Grid";
 import React from "react";
 import { IUser } from "../../../interfaces";
-import { createUser, fetchUser, findOneUser, updateUser } from "../../../service";
+import { createUser, deleteUser, fetchUser, findOneUser, updateUser } from "../../../service";
 import EditIcon from '@mui/icons-material/Edit';
 import moment from "moment";
 import AddModal from "./Modals/AddMoal";
 import AlertSanck from "../../../components/common/Alert";
 import { AuthContext } from "../../../Auth/AuthProvider";
 import EditModal from "./Modals/EditModal";
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const modalStyle = {
     position: "absolute" as const,
@@ -42,6 +43,10 @@ export default function User() {
 
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
+    const handleCloseEdit = () => {
+        setOpenEdit(false)
+        resetForm()
+    };
     const handleUsuario = (value: string) => setUsuario(value)
     const handlePassword = (value: string) => setPassword(value)
     const handleRol = (value: string) => setRol(value)
@@ -147,6 +152,29 @@ export default function User() {
         }
     }
 
+    const submitDelete = async (id:any) => {
+        try {
+            const response = await deleteUser(id)
+            const { code, data, message } = response;
+            if (code === "000") {
+                await getUser()
+
+                setOpenEdit(false);
+                resetForm()
+
+                setSnackbarMessage(message);
+                setSnackbarColor("success");
+                setSnackbarOpen(true);
+            } else {
+                setSnackbarMessage(message);
+                setSnackbarColor("error");
+                setSnackbarOpen(true);
+            }
+        } catch (error) {
+            console.log("error: ", error);
+        }
+    }
+
 
     const handleEdit = (value: any) => {
         setUsersId(value.IdUser)
@@ -191,7 +219,7 @@ export default function User() {
                         handlePassword={handlePassword}
                         handleRol={handleRol}
                         onSave={submitUpdate}
-                        onCancel={handleClose}
+                        onCancel={handleCloseEdit}
                     />
                 </Box>
             </Modal>
@@ -244,7 +272,6 @@ export default function User() {
             },
             {
                 field: "accion",
-
                 headerName: "Acción",
                 sortable: false,
                 filterable: false,
@@ -253,16 +280,25 @@ export default function User() {
                 headerAlign: "center",
                 align: "center",
                 renderCell: (params) => (
-                    <IconButton
-                        size="small"
-                        onClick={() => {
-                            setOpenEdit(true)
-                            handleEdit(params.row)
-                        }}
-                        disabled={!(userContext?.rol === "GERENTE_TI" || userContext?.rol === "ANALISTA")}
-                    >
-                        <EditIcon sx={{ fontSize: "18px" }} />
-                    </IconButton>
+                    <Box>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setOpenEdit(true)
+                                handleEdit(params.row)
+                            }}
+                            disabled={!(userContext?.rol === "GERENTE_TI" || userContext?.rol === "ANALISTA")}
+                        >
+                            <EditIcon sx={{ fontSize: "18px" }} />
+                        </IconButton>
+                         <IconButton
+                            size="small"
+                            onClick={() => submitDelete(params.row.IdUser as any)}
+                            disabled={!(userContext?.rol === "GERENTE_TI" || userContext?.rol === "ANALISTA")}
+                        >
+                            <DeleteIcon sx={{ fontSize: "18px" }} />
+                        </IconButton>
+                    </Box>
                 ),
             },
         ],

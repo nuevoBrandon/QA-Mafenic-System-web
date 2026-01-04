@@ -7,7 +7,8 @@ export const environment ={
         users:'/users',
         user:'/user',
         create:'/create',
-        update:"/update"
+        update:"/update",
+        delete:"/delete"
     },
     ticket:{
         base:'/ticket',
