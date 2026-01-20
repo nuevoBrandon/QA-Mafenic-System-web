@@ -1,4 +1,4 @@
-const baseUrl = 'http://localhost:5000/api/v1'
+const baseUrl = 'http://72.61.53.212:5000/api/v1'
 export const environment ={
     base:baseUrl,
     auth:{
